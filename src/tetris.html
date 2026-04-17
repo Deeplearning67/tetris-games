@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>经典俄罗斯方块</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #1a1a1a;
+            color: white;
+        }
+        .game-container {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+        }
+        #gameCanvas {
+            border: 3px solid #ffffff;
+            background-color: #000;
+        }
+        .info-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            font-size: 18px;
+        }
+        .score, .level {
+            padding: 10px;
+            background: #333;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .tips {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #ccc;
+            line-height: 1.6;
+        }
+        h1 {
+            margin-bottom: 20px;
+            color: #ffcc00;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 经典俄罗斯方块</h1>
+    <div class="game-container">
+        <canvas id="gameCanvas" width="300" height="600"></canvas>
+        <div class="info-panel">
+            <div class="score">分数: <span id="score">0</span></div>
+            <div class="level">等级: <span id="level">1</span></div>
+            <div class="tips">
+                🎯 操作说明<br>
+                ← → 左右移动<br>
+                ↑ 旋转方块<br>
+                ↓ 加速下落<br>
+                空格 直接落地
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const BLOCK_SIZE = 30;
+        const ROWS = 20;
+        const COLS = 10;
+
+        const SHAPES = [
+            [[1,1,1,1]],
+            [[1,1],[1,1]],
+            [[0,1,0],[1,1,1]],
+            [[1,0,0],[1,1,1]],
+            [[0,0,1],[1,1,1]],
+            [[0,1,1],[1,1,0]],
+            [[1,1,0],[0,1,1]]
+        ];
+        const COLORS = ['#00ffff','#ffff00','#a020f0','#ffa500','#0000ff','#00ff00','#ff0000'];
+
+        let board = [];
+        let currentShape, currentColor, currentX, currentY;
+        let score = 0, level = 1, gameOver = false, dropInterval;
+
+        function initBoard() {
+            for(let r=0; r<ROWS; r++){
+                board[r] = [];
+                for(let c=0; c<COLS; c++){
+                    board[r][c] = null;
+                }
+            }
+        }
+
+        function newShape() {
+            const rand = Math.floor(Math.random() * SHAPES.length);
+            currentShape = SHAPES[rand];
+            currentColor = COLORS[rand];
+            currentX = Math.floor(COLS / 2) - Math.floor(currentShape[0].length / 2);
+            currentY = 0;
+            if(collision(currentX, currentY, currentShape)){
+                gameOver = true;
+                alert("游戏结束！最终分数：" + score);
+                clearInterval(dropInterval);
+            }
+        }
+
+        function collision(x, y, shape) {
+            for(let r=0; r<shape.length; r++){
+                for(let c=0; c<shape[r].length; c++){
+                    if(shape[r][c]){
+                        const newX = x + c;
+                        const newY = y + r;
+                        if(newX < 0 || newX >= COLS || newY >= ROWS || (newY >=0 && board[newY][newX])){
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function drawBlock(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x*BLOCK_SIZE, y*BLOCK_SIZE, BLOCK_SIZE-1, BLOCK_SIZE-1);
+            ctx.strokeStyle = '#fff';
+            ctx.strokeRect(x*BLOCK_SIZE, y*BLOCK_SIZE, BLOCK_SIZE-1, BLOCK_SIZE-1);
+        }
+
+        function drawGame() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+            for(let r=0; r<ROWS; r++){
+                for(let c=0; c<COLS; c++){
+                    if(board[r][c]) drawBlock(c, r, board[r][c]);
+                }
+            }
+            for(let r=0; r<currentShape.length; r++){
+                for(let c=0; c<currentShape[r].length; c++){
+                    if(currentShape[r][c]) drawBlock(currentX + c, currentY + r, currentColor);
+                }
+            }
+        }
+
+        function mergeShape() {
+            for(let r=0; r<currentShape.length; r++){
+                for(let c=0; c<currentShape[r].length; c++){
+                    if(currentShape[r][c]) board[currentY + r][currentX + c] = currentColor;
+                }
+            }
+        }
+
+        function clearLines() {
+            let lines = 0;
+            for(let r=ROWS-1; r>=0; r--){
+                if(board[r].every(cell => cell !== null)){
+                    board.splice(r, 1);
+                    board.unshift(new Array(COLS).fill(null));
+                    r++;
+                    lines++;
+                }
+            }
+            if(lines === 1) score += 100;
+            else if(lines === 2) score += 300;
+            else if(lines === 3) score += 500;
+            else if(lines >= 4) score += 800;
+            level = Math.floor(score / 1000) + 1;
+            document.getElementById('score').innerText = score;
+            document.getElementById('level').innerText = level;
+        }
+
+        function dropDown() {
+            if(!collision(currentX, currentY+1, currentShape)){
+                currentY++;
+            } else {
+                mergeShape();
+                clearLines();
+                newShape();
+            }
+            drawGame();
+        }
+
+        function rotateShape() {
+            const rotated = currentShape[0].map((_, index) =>
+                currentShape.map(row => row[index]).reverse()
+            );
+            if(!collision(currentX, currentY, rotated)){
+                currentShape = rotated;
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if(gameOver) return;
+            if(e.key === 'ArrowLeft' && !collision(currentX-1, currentY, currentShape)) currentX--;
+            else if(e.key === 'ArrowRight' && !collision(currentX+1, currentY, currentShape)) currentX++;
+            else if(e.key === 'ArrowDown') dropDown();
+            else if(e.key === 'ArrowUp') rotateShape();
+            else if(e.key === ' '){
+                while(!collision(currentX, currentY+1, currentShape)) currentY++;
+                dropDown();
+            }
+            drawGame();
+        });
+
+        function startGame() {
+            initBoard();
+            newShape();
+            drawGame();
+            dropInterval = setInterval(dropDown, 1000 - (level-1)*100);
+        }
+
+        startGame();
+    </script>
+</body>
+</html>
