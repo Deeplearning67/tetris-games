@@ -78,6 +78,8 @@ Tetris is a classic puzzle game invented by Alexey Pajitnov in 1984. The goal is
 俄罗斯方块由俄罗斯程序员阿列克谢·帕吉特诺夫于1984年发明。玩家通过旋转和移动下落的方块，使其填满一行后消除得分。方块堆叠到顶部时游戏结束。
 
 ---
+<img width="821" height="1215" alt="捕获" src="https://github.com/user-attachments/assets/715b5bf9-d1f7-4de8-a79d-78d3c37bf094" />
+
 
 ## 📄 License / 许可证
 
